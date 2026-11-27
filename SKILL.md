@@ -21,19 +21,23 @@ Use this skill when the user wants a free, self-hosted alternative to paid AI AP
 
 3. **Run Schemathesis**
    - Start with CLI for speed: `schemathesis run openapi.yaml --url <base-url> --max-examples=100`.
-   - Add `schemathesis.toml` for auth, phases, and per-operation overrides.
-   - Enable stateful and fuzzing phases for deeper coverage.
+   - Add `schemathesis.toml` for auth, phases, and per-operation overrides. See [[case-volume]] for a validated example.
+   - Select phases with `--phases`:
+     - `examples` runs explicit examples from the schema.
+     - `coverage` generates targeted cases for schema constraints and boundary values.
+     - `fuzzing` generates cases with Hypothesis. `--max-examples` applies per operation.
+     - `stateful` chains dependent operations when the schema exposes usable links.
 
 4. **Enhance with local agent**
    - Generate custom `@schemathesis.check` functions for business rules (user isolation, audit headers, etc.).
-   - Place them in `hooks.py` and load with `SCHEMATHESIS_HOOKS=hooks`.
-   - Convert failures into permanent regression tests.
+   - Place them in `hooks.py` and load via `hooks = ["./hooks.py"]` in `schemathesis.toml`. See [[hooks-examples]] for the environment-variable form.
+   - Generate pytest reproducers with `--report=pytest` and adapt their assertions into permanent regression tests.
    - Improve schema based on real failures.
 
 5. **CI dual-track**
    - PR: shallow run (`max-examples=50`).
    - Nightly/main: deep run (`max-examples=300+`, stateful enabled).
-   - Use official GitHub Action `schemathesis/action@v3` or Docker.
+   - Pin Schemathesis and upload reports in both workflows. See [[ci-examples]].
 
 ## Key Files to Produce
 
@@ -49,15 +53,36 @@ Use this skill when the user wants a free, self-hosted alternative to paid AI AP
 
 ```bash
 # Quick smoke
-uvx schemathesis run openapi.yaml --url http://localhost:8080 --max-examples=50
+uvx schemathesis@4.34.3 run openapi.yaml --url http://localhost:8080 --max-examples=50
 
-# With hooks + HTML report
-export SCHEMATHESIS_HOOKS=hooks
-schemathesis run openapi.yaml --url http://localhost:8080 --report=html
+# Load configured hooks and write HTML and pytest reports
+uvx schemathesis@4.34.3 --config-file schemathesis.toml run openapi.yaml \
+  --url http://localhost:8080 --report=html,pytest \
+  --report-html-path=schemathesis-report/html \
+  --report-pytest-path=schemathesis-report/test_regression.py
 
-# Replay a failure
-schemathesis replay <failure-id>
+# Set API_TOKEN to the token used for the original run.
+# Replace <schema-key> and <crash-file> with names from the crash directory.
+uvx schemathesis@4.34.3 replay --keep ".schemathesis/default/cache/crashes/<schema-key>/<crash-file>.json" \
+  -H "Authorization: Bearer ${API_TOKEN}"
 ```
+
+Open `schemathesis-report/html/index.html` and keep the report directory together. The pytest file reproduces observed failures. Restore redacted auth from your test environment and add business-specific assertions where needed before keeping it as a regression test.
+
+`replay` accepts a saved crash file or a crash directory. The crash file stores the Authorization value as `[Filtered]`, so pass the original credentials again when replaying an authenticated request. If the JSON has been moved away from its crash directory and `manifest.json`, pass `--schema-location openapi.yaml` and set `--url` to the original API base URL. In 4.34.3 it also resolves a test case ID when a corresponding crash file is available in the cache. For failures without a saved crash, use the printed curl command or the generated pytest reproducer.
+
+## Local verification with 4.34.3
+
+The commands below use a local OpenAPI fixture. `"$BASE_URL"`, `"$CRASH_FILE"`, and `"$CASE_ID"` stand for values from that run.
+
+| Command | Observed output |
+|---------|-----------------|
+| `uvx schemathesis@4.34.3 --help` | Listed `--config-file PATH` and the `replay` command. |
+| `uvx schemathesis@4.34.3 replay --help` | `Usage: schemathesis replay [OPTIONS] [PATH]` |
+| `uvx schemathesis@4.34.3 replay --keep "$CRASH_FILE" --url "$BASE_URL" -H "Authorization: Bearer local-demo"` | `Replaying 1 case from` the saved JSON file and `ST103 Undocumented status code` for the fixture's HTTP 201. |
+| `uvx schemathesis@4.34.3 replay --keep "$CASE_ID" --url "$BASE_URL" -H "Authorization: Bearer local-demo"` | Replayed the same saved case by its test case ID. |
+| `uvx schemathesis@4.34.3 run --help` | Listed all four phases, `--report-html-path DIRECTORY`, and `--report-pytest-path FILENAME`. |
+| `uvx schemathesis@4.34.3 run openapi.json --url "$BASE_URL" -H "Authorization: Bearer local-demo" --mode=positive --max-examples=2 --phases=examples,coverage,fuzzing,stateful` | Examples, Coverage, and Fuzzing passed. The fixture had no links, so output reported `Stateful (not applicable)`. |
 
 ## When to Read More
 

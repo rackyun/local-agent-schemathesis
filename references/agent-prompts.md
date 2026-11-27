@@ -19,7 +19,8 @@ connections: [hooks-examples, ci-examples]
 - 只在相关接口和状态码下检查
 - 失败时抛出 AssertionError，信息要清晰
 - 代码放在 hooks.py 中
-- 同时给出如何加载的命令（SCHEMATHESIS_HOOKS）
+- 在 schemathesis.toml 的顶层用 hooks = ["./hooks.py"] 加载。全局选项 --config-file 必须放在 run 前面，示例命令如下。
+  uvx schemathesis@4.34.3 --config-file schemathesis.toml run openapi.yaml --url <base-url>
 
 请直接输出完整可运行的 Python 代码。
 ```
@@ -29,11 +30,11 @@ connections: [hooks-examples, ci-examples]
 ```text
 下面是一次 Schemathesis 失败的信息（包含 curl 或响应）：
 
-[粘贴失败详情 / curl / 响应片段]
+[优先粘贴 --report=pytest 生成的复现代码，也可提供失败详情 / curl / 响应片段]
 
 请完成：
 1. 分析根因（是 schema 问题、业务逻辑问题，还是数据问题）
-2. 生成一个可独立运行的 pytest 回归测试（使用 requests 或 httpx）
+2. 已有 pytest 复现代码时，补充修复后的预期断言；否则生成可独立运行的 pytest 回归测试（使用 requests 或 httpx）
 3. 测试名要能看出是哪个接口、什么场景
 4. 断言要明确
 5. 如果需要，同时给出改进 OpenAPI 的建议

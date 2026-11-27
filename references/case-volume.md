@@ -8,8 +8,8 @@ connections: [ci-examples, agent-prompts]
 > **重要说明**：`--max-examples`（或 `generation.max-examples`）是**按每个操作（operation）计算的**，不是整个 API 的总用例数。
 >
 > - 一个 operation = 一个路径 + 一个 HTTP 方法（如 `GET /users/{id}`、`POST /orders` 各算一个）
-> - `--max-examples=100` 表示每个操作最多生成 100 个用例
-> - 总用例数 ≈ 操作数 × max-examples
+> - `--max-examples=100` 为 fuzzing 阶段的每个操作设置 100 个 Hypothesis 样例的预算
+> - fuzzing 用例量级 ≈ 操作数 × max-examples。其他阶段和失败缩减的请求另计。
 
 下面是按场景的建议值（均为**每个操作**的数量）。
 
@@ -57,16 +57,31 @@ connections: [ci-examples, agent-prompts]
 generation.max-examples = 100          # 默认（每个操作）
 
 [[operations]]
-include-path = "/users/"
+include-name = "GET /users/{id}"
 generation.max-examples = 300          # 关键接口单独提高（每个操作）
 ```
 
 ```bash
-# 命令行覆盖（同样是每个操作）
-schemathesis run openapi.yaml --url http://localhost:8080 --max-examples=50
+# 使用配置，保留按操作设置的预算
+uvx schemathesis@4.34.3 --config-file schemathesis.toml run openapi.yaml \
+  --url http://localhost:8080 --phases=fuzzing
 ```
+
+`include-name` 按 `HTTP 方法 + 路径模板` 匹配单个操作。需要统一覆盖各操作的预算时，在 `run` 参数中传入 `--max-examples=50`。
+
+## 本机验证（4.34.3）
+
+对照随包提供的 `schemathesis/config/schema.json`，确认顶层 `generation.max-examples`、`[[operations]]` 和操作内覆盖均受支持。按上面的结构保存 `verify.toml`，将默认值设为 2，`GET /users/{id}` 设为 3。
+
+```bash
+uvx schemathesis@4.34.3 --config-file verify.toml run openapi.json \
+  --url "$BASE_URL" -H "Authorization: Bearer local-demo" \
+  --mode=positive --phases=fuzzing
+```
+
+针对两个本地操作实跑，CLI 输出 `5 generated, 5 passed`。分别读取生效配置，确认 `GET /health` 使用默认值 2，`GET /users/{id}` 使用覆盖值 3。
 
 ## 与 CI 双轨的对应关系
 
-- **PR**：每个操作 `max-examples=50`（或 80），`--phases=fuzzing`，目标 < 5 分钟
-- **Nightly**：每个操作 `max-examples=300+`，`--phases=fuzzing,stateful`，可接受更长时间
+- **PR**：每个操作 `max-examples=50`（或 80），`--phases=examples,coverage,fuzzing`，目标 < 5 分钟
+- **Nightly**：每个操作 `max-examples=300+`，`--phases=examples,coverage,fuzzing,stateful`，可接受更长时间
