@@ -34,6 +34,10 @@ connections: [case-volume, agent-prompts, ci-examples]
 6. **下一步行动**
    - 优先级排序的待办（修 schema / 加 check / 提 examples / 过滤噪声）
 
+7. **多接口场景**（运行场景时填写）
+   - 记录场景名、每步通过 / 失败 / 跳过、变量来源和去向，以及清理结果。
+   - 用状态码、断言或异常说明首个失败步骤。证据不足时将根因标记为待确认。
+
 ## 报告模板（可直接要求 Agent 填充）
 
 ```markdown
@@ -72,6 +76,18 @@ connections: [case-volume, agent-prompts, ci-examples]
 
 - `tests/test_regression_user_isolation.py`
 
+## 多接口场景（运行场景时填写）
+
+**场景名**：create_then_get_order
+
+| 步骤 | 结果 | 传参或提取 | 实际结果 |
+|---|---|---|---|
+| create_order | 失败 | 从响应的 `$.id` 提取 `order_id`，提取失败 | 201，响应缺少 id |
+| get_order | 跳过 | 需要 `order_id` | 未发请求 |
+
+- **失败根因**：建单响应缺少约定字段 `id`，查单无法构造路径。服务端为何漏字段待确认。
+- **清理结果**：未取得资源标识，未执行删除。
+
 ## 下一步
 
 1. ...
@@ -82,5 +98,5 @@ connections: [case-volume, agent-prompts, ci-examples]
 
 ```text
 测试完成后，请严格按照 references/test-report.md 中的模板输出完整分析报告。
-不要只返回原始日志。必须包含失败分析、schema 改进建议、自定义 check 建议和下一步行动。
+不要只返回原始日志。必须包含失败分析、schema 改进建议、自定义 check 建议和下一步行动。运行多接口场景时填写场景章节。
 ```
