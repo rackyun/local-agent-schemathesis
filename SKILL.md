@@ -61,8 +61,13 @@ schemathesis replay <failure-id>
 
 ## When to Read More
 
-- For custom check patterns and hook examples → see `references/hooks-examples.md` (create if needed).
-- For CI templates → see `references/ci-examples.md`.
+- For custom check patterns and hook examples → see [[hooks-examples]]
+- For CI templates → see [[ci-examples]]
+- Full knowledge graph → `references/INDEX.md`
+
+## Knowledge Graph
+
+Start at `references/INDEX.md` for the full map.
 
 ## Success Criteria
 
