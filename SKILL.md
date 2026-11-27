@@ -63,6 +63,7 @@ schemathesis replay <failure-id>
 
 - For custom check patterns and hook examples → see [[hooks-examples]]
 - For CI templates → see [[ci-examples]]
+- For ready-to-use agent prompts → see [[agent-prompts]]
 - Full knowledge graph → `references/INDEX.md`
 
 ## Knowledge Graph
