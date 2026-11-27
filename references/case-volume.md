@@ -5,17 +5,31 @@ connections: [ci-examples, agent-prompts]
 
 # Case Generation Volume Recommendations
 
-Schemathesis 的 `--max-examples`（或配置里的 `generation.max-examples`）控制每个操作生成的用例数量。下面是按场景的建议值。
+> **重要说明**：`--max-examples`（或 `generation.max-examples`）是**按每个操作（operation）计算的**，不是整个 API 的总用例数。
+>
+> - 一个 operation = 一个路径 + 一个 HTTP 方法（如 `GET /users/{id}`、`POST /orders` 各算一个）
+> - `--max-examples=100` 表示每个操作最多生成 100 个用例
+> - 总用例数 ≈ 操作数 × max-examples
+
+下面是按场景的建议值（均为**每个操作**的数量）。
 
 ## 快速参考
 
-| 场景 | max-examples | 预计耗时（中等规模 API） | 说明 |
-|------|--------------|--------------------------|------|
+| 场景 | 每个操作 max-examples | 预计耗时（中等规模 API） | 说明 |
+|------|-----------------------|--------------------------|------|
 | 本地快速冒烟 | 20–50 | < 1 分钟 | 验证链路是否通、schema 是否基本可用 |
 | PR / 预合并检查 | 50–100 | 2–5 分钟 | 平衡速度与覆盖，适合 CI 门禁 |
 | 夜间 / 深度测试 | 200–500 | 15–60 分钟 | 配合 stateful + fuzzing，追求更高覆盖 |
 | 安全 / 边界专项 | 500–1000+ | 视接口而定 | 对关键接口单独提高，其他保持较低 |
 | 新接口首次接入 | 100–200 | — | 先跑一轮，再根据失败调整 |
+
+### 总量估算示例
+
+| API 规模 | 操作数 | 每个操作 examples | 大致总用例数 |
+|----------|--------|-------------------|--------------|
+| 小型 | 15 | 50 | ~750 |
+| 中型 | 60 | 50 | ~3000 |
+| 大型 | 150 | 30（过滤后） | 视过滤范围而定 |
 
 ## 按 API 规模调整
 
@@ -40,19 +54,19 @@ Schemathesis 的 `--max-examples`（或配置里的 `generation.max-examples`）
 
 ```toml
 # schemathesis.toml
-generation.max-examples = 100          # 默认
+generation.max-examples = 100          # 默认（每个操作）
 
 [[operations]]
 include-path = "/users/"
-generation.max-examples = 300          # 关键接口单独提高
+generation.max-examples = 300          # 关键接口单独提高（每个操作）
 ```
 
 ```bash
-# 命令行覆盖
+# 命令行覆盖（同样是每个操作）
 schemathesis run openapi.yaml --url http://localhost:8080 --max-examples=50
 ```
 
 ## 与 CI 双轨的对应关系
 
-- **PR**：`max-examples=50`（或 80），`--phases=fuzzing`，目标 < 5 分钟
-- **Nightly**：`max-examples=300+`，`--phases=fuzzing,stateful`，可接受更长时间
+- **PR**：每个操作 `max-examples=50`（或 80），`--phases=fuzzing`，目标 < 5 分钟
+- **Nightly**：每个操作 `max-examples=300+`，`--phases=fuzzing,stateful`，可接受更长时间
