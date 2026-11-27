@@ -1,0 +1,33 @@
+{
+  "skill": "local-agent-schemathesis",
+  "test_cases": [
+    {
+      "name": "design_full_workflow",
+      "input": "帮我设计用本地 Agent + Schemathesis 的 API 测试工作流",
+      "assertions": [
+        "Provides numbered core workflow steps",
+        "Includes schemathesis.toml and hooks.py recommendations",
+        "Mentions dual-track CI (PR shallow + nightly deep)",
+        "Suggests using Claude Code or Cursor as the local agent"
+      ]
+    },
+    {
+      "name": "generate_custom_check",
+      "input": "用 Schemathesis 给用户接口加一个数据隔离检查",
+      "assertions": [
+        "Produces a Python @schemathesis.check function",
+        "Explains how to load it with SCHEMATHESIS_HOOKS",
+        "References the path parameter or response body correctly"
+      ]
+    },
+    {
+      "name": "ci_setup",
+      "input": "给 Schemathesis 写 GitHub Actions，PR 跑浅一点，夜间跑深一点",
+      "assertions": [
+        "Shows two workflow examples or clear PR vs nightly difference",
+        "Uses max-examples or phases configuration",
+        "Mentions official action or equivalent Docker/CLI"
+      ]
+    }
+  ]
+}

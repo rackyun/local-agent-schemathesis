@@ -1,0 +1,25 @@
+{
+  "skill": "local-agent-schemathesis",
+  "test_cases": [
+    {
+      "input": "帮我设计用本地 Agent + Schemathesis 的工作流",
+      "should_trigger": true
+    },
+    {
+      "input": "Schemathesis 怎么结合 Claude Code 做 API 测试",
+      "should_trigger": true
+    },
+    {
+      "input": "自托管免费的 AI API 测试方案",
+      "should_trigger": true
+    },
+    {
+      "input": "Keploy 怎么收费",
+      "should_trigger": false
+    },
+    {
+      "input": "Postman Agent Mode 怎么用",
+      "should_trigger": false
+    }
+  ]
+}
