@@ -65,6 +65,7 @@ schemathesis replay <failure-id>
 - For CI templates → see [[ci-examples]]
 - For ready-to-use agent prompts → see [[agent-prompts]]
 - For case generation volume recommendations → see [[case-volume]]
+- For post-run test analysis report template → see [[test-report]]
 - Full knowledge graph → `references/INDEX.md`
 
 ## Knowledge Graph
