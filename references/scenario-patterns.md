@@ -16,6 +16,71 @@ YAML 用于确认场景。pytest 执行根据已确认草稿生成的 Python 测
 
 为每个分支分配唯一且稳定的 case ID。确认后的 ID 同时用于 pytest 参数 ID 和报告。相同步骤和断言仅输入不同的用例共用参数化函数，步骤或断言路径不同的分支用独立函数。
 
+## 覆盖矩阵
+
+先按 [场景提示词第 6 节](agent-prompts.md#6-generate-a-multi-operation-scenario) 盘点契约，再把 `coverage` 加到草稿中。它可附加于既有 YAML，旧单路径的顶层 `steps`、`asserts`、`cleanup` 保持原义。为旧单路径补算覆盖时可给整条链路分配一个 case ID，无需改写步骤。没有覆盖矩阵时先补盘点，勿用现有用例数推算覆盖。
+
+以下为与下方四条最小用例对应的模拟契约切片，只列该切片确认的八个预期。若实际契约另有下限、上限外输入或失败后状态规则，应继续枚举并补用例。每条见证引用一个 case ID、步骤和该步骤的具体断言，可在实际 pytest 中按该用例和断言定位。同一用例可见证多项逻辑。一个逻辑 ID 下的见证全部必要。
+
+```yaml
+coverage:
+  required:
+    - id: create-normal
+      source: 模拟建单约定
+      trigger: 数量 2
+      expected: 建单成功
+      witnesses:
+        - {case: order-normal, step: create_order, assertion: "status == 201"}
+    - id: create-id
+      source: 模拟建单响应约定
+      trigger: 正常建单成功
+      expected: 返回可传递的订单 ID
+      witnesses:
+        - {case: order-normal, step: create_order, assertion: "id is a non-empty string"}
+    - id: lookup-found
+      source: 模拟查询约定
+      trigger: 查询正常创建的订单
+      expected: 可查到订单
+      witnesses:
+        - {case: order-normal, step: get_order, assertion: "status == 200"}
+    - id: lookup-same-id
+      source: 模拟查询响应约定
+      trigger: 用建单响应的 ID 查询
+      expected: 查询响应对应同一订单
+      witnesses:
+        - {case: order-normal, step: get_order, assertion: "response.id == order_id"}
+    - id: accept-max
+      source: 模拟数量上限约定
+      trigger: 数量 10
+      expected: 上限允许创建
+      witnesses:
+        - {case: order-max-quantity, step: create_order, assertion: "status == 201"}
+    - id: reject-zero
+      source: 模拟拒绝约定
+      trigger: 数量 0
+      expected: 拒绝该数量
+      witnesses:
+        - {case: order-invalid-quantity, step: reject_order, assertion: "status == 422"}
+    - id: delete-created
+      source: 模拟删除约定
+      trigger: 删除本次创建的订单
+      expected: 删除成功
+      witnesses:
+        - {case: order-deleted-not-found, step: delete_order, assertion: "status == 204"}
+    - id: lookup-after-delete
+      source: 模拟删除后查询约定
+      trigger: 查同一笔已删除订单
+      expected: 已删除订单查不到
+      witnesses:
+        - {case: order-deleted-not-found, step: get_deleted_order, assertion: "status == 404"}
+  pending: []
+  not_applicable:
+    - rule: 事务回滚
+      reason: 模拟切片只有单资源操作，无适用的事务契约
+```
+
+草稿检查每项必要见证能否执行以及是否绑定具体断言。计划覆盖率须为 100%，否则补齐或列出阻塞 ID。存在未知规则时，在 `pending` 列出规则、缺少的依据及待确认问题（如删除后是否允许恢复），不要填猜测的预期或报总体达标。请用户确认当前草稿。确认后的必测逻辑总数是本轮固定分母，新增或变更规则后重新确认并另记统计基线。生成和运行均使用 [测试分析报告](test-report.md) 逐项核对。
+
 ## 订单示例
 
 以下接口、数量和状态码均为本地模拟契约。数量允许 1 至 10。建单成功返回 201 和非空订单 ID，数量 0 返回 422 且不创建订单。查询存在的订单返回 200 和订单 ID，删除成功返回 204，查询已删除的同一订单返回 404。
