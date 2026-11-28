@@ -33,7 +33,7 @@ Use this skill when the user wants a free, self-hosted alternative to paid AI AP
    - Place them in `hooks.py` and load via `hooks = ["./hooks.py"]` in `schemathesis.toml`. See [[hooks-examples]] for the environment-variable form.
    - Generate pytest reproducers with `--report=pytest` and adapt their assertions into permanent regression tests.
    - Improve schema based on real failures.
-   - For multi-operation scenarios, confirm a YAML draft with the user before generating pytest tests. See [[scenario-patterns]].
+   - Before drafting a new multi-operation scenario, require OpenAPI, a test objective, and a readable technical design. Check the workspace and supplied materials first. Reuse a sufficient design or ask for one if missing or unreadable. Resolve missing rules and conflicts with the user, and confirm the YAML draft before generating pytest tests. See [[scenario-patterns]] for the design checklist.
 
 5. **CI dual-track**
    - PR: shallow run (`max-examples=50`).

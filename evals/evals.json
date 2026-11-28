@@ -31,12 +31,47 @@
     },
     {
       "name": "draft_multi_operation_scenario",
-      "input": "用本地 Agent 和 Schemathesis 测试建单后查单。POST /orders 返回 201 和 id，用这个 id 请求 GET /orders/{id}，预期 200 和相同 id。用 DELETE /orders/{id} 清理，预期 204。请覆盖正常数量、合法上限、非法数量和删除后查询。上限、拒绝状态码、删除后查询状态码需要我确认。",
+      "input": "测试目标：覆盖建单后查单、数量上限、非法数量和删除后查询。模拟 OpenAPI：POST /orders 正常返回 201 和非空 id；GET /orders/{id} 查正常订单返回 200 和 id；DELETE /orders/{id} 返回 204。用户确认的精简技术设计 §链路：使用测试令牌和已有测试商品，正常建单后把返回 id 用于 GET，响应 id 必须相同；最后按同一 id 清理。§异常：建单被拒时停止，查单失败时清理已创建订单；主动删除成功后无需再次清理。§待确认：数量上限、非法数量拒绝的状态码、删除后的查询状态码尚未确认。重试、回滚、异步不在本轮范围，因为只测试同步单订单链路。",
       "assertions": [
-        "Produces a scenario YAML draft with the response id explicitly saved and reused by the lookup step, plus assertions and cleanup",
+        "Drafts the confirmed normal lookup with the response id explicitly saved and reused, concrete assertions and cleanup, with unresolved branches separated",
         "Asks the user to confirm the draft before generating pytest code",
         "Lists required branches with unique case IDs and marks unknown limits and statuses as pending confirmation without guessing",
-        "Explains grouping same-path inputs by parameter and keeping distinct execution paths separate, with draft case IDs reused in pytest and reporting"
+        "Explains how to parameterize same-path inputs once confirmed and keep distinct execution paths separate, with stable case IDs reused in pytest and reporting"
+      ]
+    },
+    {
+      "name": "map_confirmed_order_logic",
+      "input": "测试目标：仅验证模拟订单契约的八个预期，先给 YAML 草稿。模拟 OpenAPI：POST /orders 建单成功返回 201 和非空字符串 id，数量 0 返回 422；GET /orders/{id} 存在时返回 200 和 id，已删除时返回 404；DELETE /orders/{id} 删除返回 204。用户确认的精简技术设计 §前置：测试令牌和已有测试商品，各用例独立建单。§数量：数量 2 和恰为上限的 10 可建单；数量 0 被拒且不创建订单，也不发 GET。只验证这三个输入。§查单：用建单 id 查到同一订单才算成功；用该 id 删除本次创建的订单，查单失败仍须清理。§删除：已创建可变为已删除；用同一 id 查询已删除订单应查不到，无恢复操作，成功删除后不重复清理。§范围：只含同步单资源操作，重试、幂等、回滚、异步未约定且不适用。",
+      "assertions": [
+        "Maps all eight separately observable expectations to stable logic IDs with source, trigger, expected outcome, and concrete witnesses: normal POST 201, nonempty id, normal GET 200, same id, max POST 201, zero POST 422, DELETE 204, and post-delete GET 404",
+        "Every witness binds an executable case path and assertion, and multiple logic IDs can share a single case; reports planned 8/8 (100%) for this slice independently of pytest count",
+        "Does not invent additional contractual outcomes or generate pytest before draft confirmation",
+        "Reuses the supplied design and traces logic to concrete design sections and/or OpenAPI operations, citing both when a rule spans the two inputs"
+      ]
+    },
+    {
+      "name": "report_scenario_logic_gaps",
+      "input": "已有确认草稿和运行记录，只需汇总，不生成新场景。按固定分母 8 汇总已确认的订单逻辑 A–H，全部有计划。A、B、C 的必要断言都通过；D 的第一条必要断言通过，第二条求值失败；E 的用例已启动但前置失败，目标断言没到达；F 显式跳过；G 生成时漏断言；H 有两个必要见证，只执行了第一个且通过。A–F 和 H 的全部必要断言已生成。恢复已删除订单的规则未知，事务回滚不适用（无事务契约）。",
+      "assertions": [
+        "Reports planned 8/8, generated 7/8, executed 4/8, and passed 3/8 with percentages 100%, 87.5%, 50%, and 37.5%",
+        "Lists G as the generation gap, E/F/G/H as execution gaps, and D/E/F/G/H as pass gaps; preserves D failure despite one pass and H partial evidence without counting H as executed",
+        "Lists the restore rule as pending without guessing and rollback as not applicable with its reason; does not mark overall coverage as met"
+      ]
+    },
+    {
+      "name": "request_missing_scenario_design",
+      "input": "测试目标：验证建单后按 id 查单。工作区只有模拟 OpenAPI：POST /orders 返回 201 和 id，GET /orders/{id} 返回 200 和 id。没有其他附件、设计文档或已确认的精简设计。请直接生成场景 YAML 和 pytest。",
+      "assertions": [
+        "Requests a readable technical design as a path, attachment, or user-confirmed concise design and provides the concrete minimum checklist",
+        "Stops at input collection without issuing a confirmable YAML draft or pytest even though OpenAPI and a test objective are supplied"
+      ]
+    },
+    {
+      "name": "flag_conflicting_scenario_design",
+      "input": "测试目标：验证删除后查询同一模拟订单。OpenAPI operationId getOrder（GET /orders/{id}）明确写删除后返回 404；deleteOrder 返回 204；createOrder 成功返回 201 和 id。可读取且已提供的技术设计《订单流程》§前置：测试令牌、已有测试商品、各用例单独建单。§调用和清理：用建单 id 删除，再用同一 id 查询，已主动删除后无需重复清理。§删除后查询：返回 410 才算成功。§范围：只测同步删除和查询，不测试恢复、重试及回滚。请设计 YAML 草稿。",
+      "assertions": [
+        "Identifies the 404 versus 410 conflict, cites getOrder and the design section §删除后查询, and asks the user which contract applies",
+        "Marks the affected logic pending without choosing a status or generating pytest for it and does not claim overall coverage is met"
       ]
     }
   ]
