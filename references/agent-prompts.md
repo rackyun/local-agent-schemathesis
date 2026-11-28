@@ -19,7 +19,8 @@ connections: [hooks-examples, ci-examples]
 - 只在相关接口和状态码下检查
 - 失败时抛出 AssertionError，信息要清晰
 - 代码放在 hooks.py 中
-- 同时给出如何加载的命令（SCHEMATHESIS_HOOKS）
+- 在 schemathesis.toml 的顶层用 hooks = ["./hooks.py"] 加载。全局选项 --config-file 必须放在 run 前面，示例命令如下。
+  uvx schemathesis@4.34.3 --config-file schemathesis.toml run openapi.yaml --url <base-url>
 
 请直接输出完整可运行的 Python 代码。
 ```
@@ -29,11 +30,11 @@ connections: [hooks-examples, ci-examples]
 ```text
 下面是一次 Schemathesis 失败的信息（包含 curl 或响应）：
 
-[粘贴失败详情 / curl / 响应片段]
+[优先粘贴 --report=pytest 生成的复现代码，也可提供失败详情 / curl / 响应片段]
 
 请完成：
 1. 分析根因（是 schema 问题、业务逻辑问题，还是数据问题）
-2. 生成一个可独立运行的 pytest 回归测试（使用 requests 或 httpx）
+2. 已有 pytest 复现代码时，补充修复后的预期断言；否则生成可独立运行的 pytest 回归测试（使用 requests 或 httpx）
 3. 测试名要能看出是哪个接口、什么场景
 4. 断言要明确
 5. 如果需要，同时给出改进 OpenAPI 的建议
@@ -89,4 +90,14 @@ API 描述：
 1. hooks.py 代码
 2. 加载命令
 3. 对应的 schemathesis.toml 片段
+```
+
+## 6. Generate a multi-operation scenario
+
+```text
+输入是用户用自然语言描述的 API 链路，例如“建单后，用返回的 id 查单，并确认查到的是同一笔订单”。结合实际 OpenAPI 列出相关操作。
+
+第一轮：按 references/scenario-patterns.md 输出 scenarios/<名>.scenario.yaml 草稿。草稿写清每步的方法和路径、请求数据、从哪个响应字段保存变量、后续步骤如何引用变量、每步断言和清理。对缺失的操作、传参、断言或清理约定向用户确认。请用户确认当前草稿，等待回复。
+
+确认后：按已确认草稿生成 tests/test_scenario_<名>.py。用 requests 逐步发送请求，显式保存和传递变量，逐步断言状态码及业务字段。只清理本次测试创建的资源，并单独报告清理结果。鉴权从环境读取。给出单独运行该 pytest 文件的命令，并按 references/test-report.md 报告实际运行结果。
 ```

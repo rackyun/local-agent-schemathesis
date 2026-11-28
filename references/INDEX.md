@@ -11,3 +11,4 @@ description: "Knowledge graph index for local-agent-schemathesis skill"
 - [[agent-prompts]] — Ready-to-use prompts for local agents to generate checks, regressions, and schema improvements
 - [[case-volume]] — Recommended max-examples / generation volume by scenario
 - [[test-report]] — Required post-run analysis report template and sections
+- [[scenario-patterns]] — Confirm scenario drafts and generate multi-operation pytest tests
