@@ -5,10 +5,38 @@ connections: [agent-prompts, test-report]
 
 # 场景化多接口测试
 
-1. Agent 从 OpenAPI 列出与场景相关的操作。用户用自然语言描述链路、步骤间传参和预期结果。缺少操作、数据来源、断言或清理约定时，先向用户确认缺失信息。
+1. 新场景先准备 OpenAPI、测试目标和可读取的技术设计文档。Agent 先查工作区和用户已给资料，复用可读取且覆盖测试目标的设计。
 2. Agent 输出 `scenarios/<name>.scenario.yaml` 草稿，请用户确认业务分支、操作顺序、传参、断言和清理。用户修改后重新确认。用户确认当前草稿后，再生成 `tests/test_scenario_<name>.py`。
 
-YAML 用于确认场景。pytest 执行根据已确认草稿生成的 Python 测试。
+输入规则用于生成新场景。已有 YAML 保留原有结构和用法，已生成的 pytest 仍可直接运行。Schemathesis 单接口测试照原流程运行。
+
+## 技术设计清单
+
+可提供现有文档路径、附件或用户确认的精简技术设计，格式不限。准备以下内容，范围外或不适用的项写明理由。
+
+| 填写项 | 需要说明 |
+|---|---|
+| 链路入口和成功标准 | 从哪个操作开始，哪些响应或业务结果代表完成 |
+| 前置条件 | 角色、鉴权、种子数据和初始状态 |
+| 调用顺序和数据映射 | 操作顺序，每一步从哪项响应或已有数据取值，传到哪个字段 |
+| 业务规则、范围和拒绝 | 正常输入、边界、拒绝条件及预期结果，注明测试范围 |
+| 状态变化 | 允许和禁止的迁移，及可观察的查询结果 |
+| 异常后状态和清理 | 失败后保留或撤销的数据，如何清理本次测试资源 |
+| 适用的特殊行为 | 重试、幂等、回滚、异步通信等触发条件和可观察结果 |
+
+没有可读取的技术设计时，先索取文档并给出清单，停在输入阶段，不发可供确认的 YAML 草稿或 pytest。可读设计缺关键规则时，提出具体问题并标记受影响的逻辑待确认。OpenAPI 提供接口契约，技术设计补充跨步骤业务规则。两份资料矛盾时，列出各自的具体约定和出处，请用户裁定；受影响的逻辑保持待确认，不自行补预期。
+
+## 模拟订单技术设计
+
+测试目标是验证普通建单、数量上限、数量为零被拒、删除后查询。以下模拟设计可用作精简文档示例，配合订单示例中的模拟接口约定。
+
+| 设计章节 | 约定 |
+|---|---|
+| 前置条件 | 测试环境已有 `demo-item`，使用测试 Bearer 令牌，各用例创建自己的订单。 |
+| 建单与数量 | 以 `POST /orders` 为入口，数量 2 和上限 10 可创建，数量 0 被拒且不创建订单。此切片只验证这三个输入，其他边界另行设计。 |
+| 查单与清理 | 将建单响应的 `id` 放入 `GET /orders/{order_id}` 的路径。查询返回同一 ID 才算成功。用同一 ID 删除本次订单；有订单 ID 时，即使查单失败也执行清理。 |
+| 删除后状态 | 从已创建变为已删除。主动删除成功后不重复清理；随后用同一 ID 查单应查不到。恢复订单不在此切片范围，没有约定恢复操作。 |
+| 异常与特殊行为 | 建单被拒后不查单。如果意外建单成功并返回 ID，只清理这笔意外创建的订单。此切片仅含同步单资源操作，未约定重试、幂等、回滚或异步行为，不纳入验证。 |
 
 ## 业务分支清单
 
@@ -20,55 +48,55 @@ YAML 用于确认场景。pytest 执行根据已确认草稿生成的 Python 测
 
 先按 [场景提示词第 6 节](agent-prompts.md#6-generate-a-multi-operation-scenario) 盘点契约，再把 `coverage` 加到草稿中。它可附加于既有 YAML，旧单路径的顶层 `steps`、`asserts`、`cleanup` 保持原义。为旧单路径补算覆盖时可给整条链路分配一个 case ID，无需改写步骤。没有覆盖矩阵时先补盘点，勿用现有用例数推算覆盖。
 
-以下为与下方四条最小用例对应的模拟契约切片，只列该切片确认的八个预期。若实际契约另有下限、上限外输入或失败后状态规则，应继续枚举并补用例。每条见证引用一个 case ID、步骤和该步骤的具体断言，可在实际 pytest 中按该用例和断言定位。同一用例可见证多项逻辑。一个逻辑 ID 下的见证全部必要。
+以下为与下方四条最小用例对应的模拟契约切片，只列该切片确认的八个预期。若实际契约另有下限、上限外输入或失败后状态规则，应继续枚举并补用例。每项 `source` 记录设计文档及章节和/或具体 OpenAPI 操作，涉及两者时同时列出。每条见证引用一个 case ID、步骤和该步骤的具体断言，可在实际 pytest 中按该用例和断言定位。同一用例可见证多项逻辑。一个逻辑 ID 下的见证全部必要。
 
 ```yaml
 coverage:
   required:
     - id: create-normal
-      source: 模拟建单约定
+      source: "模拟订单技术设计 / 建单与数量；模拟接口 POST /orders"
       trigger: 数量 2
       expected: 建单成功
       witnesses:
         - {case: order-normal, step: create_order, assertion: "status == 201"}
     - id: create-id
-      source: 模拟建单响应约定
+      source: "模拟接口 POST /orders 响应；模拟订单技术设计 / 查单与清理"
       trigger: 正常建单成功
       expected: 返回可传递的订单 ID
       witnesses:
         - {case: order-normal, step: create_order, assertion: "id is a non-empty string"}
     - id: lookup-found
-      source: 模拟查询约定
+      source: "模拟接口 GET /orders/{order_id} 响应；模拟订单技术设计 / 查单与清理"
       trigger: 查询正常创建的订单
       expected: 可查到订单
       witnesses:
         - {case: order-normal, step: get_order, assertion: "status == 200"}
     - id: lookup-same-id
-      source: 模拟查询响应约定
+      source: "模拟订单技术设计 / 查单与清理"
       trigger: 用建单响应的 ID 查询
       expected: 查询响应对应同一订单
       witnesses:
         - {case: order-normal, step: get_order, assertion: "response.id == order_id"}
     - id: accept-max
-      source: 模拟数量上限约定
+      source: "模拟订单技术设计 / 建单与数量；模拟接口 POST /orders"
       trigger: 数量 10
       expected: 上限允许创建
       witnesses:
         - {case: order-max-quantity, step: create_order, assertion: "status == 201"}
     - id: reject-zero
-      source: 模拟拒绝约定
+      source: "模拟订单技术设计 / 建单与数量；模拟接口 POST /orders"
       trigger: 数量 0
       expected: 拒绝该数量
       witnesses:
         - {case: order-invalid-quantity, step: reject_order, assertion: "status == 422"}
     - id: delete-created
-      source: 模拟删除约定
+      source: "模拟订单技术设计 / 删除后状态；模拟接口 DELETE /orders/{order_id}"
       trigger: 删除本次创建的订单
       expected: 删除成功
       witnesses:
         - {case: order-deleted-not-found, step: delete_order, assertion: "status == 204"}
     - id: lookup-after-delete
-      source: 模拟删除后查询约定
+      source: "模拟订单技术设计 / 删除后状态；模拟接口 GET /orders/{order_id}"
       trigger: 查同一笔已删除订单
       expected: 已删除订单查不到
       witnesses:

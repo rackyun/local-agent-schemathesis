@@ -6,7 +6,7 @@
 | --- | --- |
 | 检查接口是否符合 OpenAPI | Schemathesis 运行规范中的示例，并生成边界用例和正负例。 |
 | 根据接口依赖自动串联请求 | OpenAPI 有可用的 `links`（接口间参数映射）时，使用 Schemathesis 的 `stateful` 阶段。 |
-| 验证指定的多接口业务链路 | 用户用自然语言描述场景，确认 YAML 草稿后，由 Agent 生成独立的 pytest 测试。 |
+| 验证指定的多接口业务链路 | 提供 OpenAPI、技术设计文档和测试目标，确认 YAML 草稿后，由 Agent 生成独立的 pytest 测试。 |
 
 ## 快速开始
 
@@ -26,11 +26,11 @@
 
 ## 从业务描述生成多接口测试
 
-1. 把 OpenAPI 文件和业务场景交给 Agent。可以直接输入以下示例，按待测 API 修改接口约定。
+1. 准备 OpenAPI 文件、可读取的技术设计文档和测试目标。可提供已有设计的路径、附件或你确认的精简设计，内容可按[技术设计清单](references/scenario-patterns.md#技术设计清单)填写。
 
-   > 请先根据 OpenAPI 起草「创建订单后查询同一笔订单」的测试场景。创建成功后保存响应中的订单 ID，查询时使用这个 ID，并验证查到的订单 ID 与创建时一致。测试结束后删除本次创建的订单。请先给我看 YAML 草稿。
+   > 请读取 `openapi.yaml` 和 `docs/order-flow.md`，验证创建订单后能用返回的 ID 查到同一笔订单，并在测试结束后清理。先给我看 YAML 草稿。
 
-2. Agent 核对 OpenAPI 中的操作，有缺失信息时向你确认，然后给出 `scenarios/create_then_get_order.scenario.yaml` 草稿。检查操作顺序、订单 ID 的来源和去向、各步预期结果以及清理方式，确认当前版本后，Agent 才生成 `tests/test_scenario_create_then_get_order.py`。
+2. Agent 先复用工作区或你已提供的资料。缺少可读取的设计时，先索取并说明要填写哪些内容。设计可读但规则缺失或与 OpenAPI 冲突时，Agent 列出具体问题，受影响的逻辑标为待确认。查看 `scenarios/create_then_get_order.scenario.yaml` 中的规则出处、用例、断言和清理方式，确认当前版本后，Agent 才生成 `tests/test_scenario_create_then_get_order.py`。
 3. 在待测项目中设置测试服务地址 `API_BASE_URL` 和 Bearer 测试令牌 `API_TOKEN`，然后单独运行已经生成的 Python 测试。YAML 用于记录和确认场景，pytest 执行对应的 Python 文件。
 
    ```bash
