@@ -80,6 +80,19 @@ connections: [case-volume, agent-prompts, ci-examples]
 
 **场景名**：create_then_get_order
 
+示例数据。按确认草稿列出全部必测 case ID，包括没有运行结果的用例。
+
+| Case ID | 必测分支 | 结果 | 证据 |
+|---|---|---|---|
+| order-normal | 正常建单查单 | 失败 | 建单响应缺少 id |
+| order-max-quantity | 合法数量上限 | 通过 | 查到同一订单，清理成功 |
+| order-invalid-quantity | 非法数量被拒 | 跳过 | pytest 记录跳过原因 |
+| order-deleted-not-found | 删除后查不到 | 未执行 | 此次运行未选中该用例 |
+
+通过表示业务断言和必要清理均通过。断言或清理失败时记为失败。pytest 明确跳过时写明原因。未选中、未生成或无运行结果时记为未执行，并注明原因。此表记录业务分支的执行结果，pytest 用例数不能用来计算服务端代码覆盖率。
+
+**失败用例**：order-normal
+
 | 步骤 | 结果 | 传参或提取 | 实际结果 |
 |---|---|---|---|
 | create_order | 失败 | 从响应的 `$.id` 提取 `order_id`，提取失败 | 201，响应缺少 id |
