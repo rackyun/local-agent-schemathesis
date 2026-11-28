@@ -31,10 +31,12 @@
     },
     {
       "name": "draft_multi_operation_scenario",
-      "input": "用本地 Agent 和 Schemathesis 测试建单后查单。POST /orders 返回 201 和 id，用这个 id 请求 GET /orders/{id}，预期 200 和相同 id。用 DELETE /orders/{id} 清理，预期 204。",
+      "input": "用本地 Agent 和 Schemathesis 测试建单后查单。POST /orders 返回 201 和 id，用这个 id 请求 GET /orders/{id}，预期 200 和相同 id。用 DELETE /orders/{id} 清理，预期 204。请覆盖正常数量、合法上限、非法数量和删除后查询。上限、拒绝状态码、删除后查询状态码需要我确认。",
       "assertions": [
         "Produces a scenario YAML draft with the response id explicitly saved and reused by the lookup step, plus assertions and cleanup",
-        "Asks the user to confirm the draft before generating pytest code"
+        "Asks the user to confirm the draft before generating pytest code",
+        "Lists required branches with unique case IDs and marks unknown limits and statuses as pending confirmation without guessing",
+        "Explains grouping same-path inputs by parameter and keeping distinct execution paths separate, with draft case IDs reused in pytest and reporting"
       ]
     }
   ]
